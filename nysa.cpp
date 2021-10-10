@@ -148,6 +148,10 @@ bool determine_and_parse_gate(string line, bool &correct_input, int line_number,
     return parse_gate(line, buffer, correct_input, line_number, all_output_streams, type);
 }
 
+// Wczytuje do wektora gates kolejne bramki oraz do wektora gate_types ich typy
+// w kolejności pojawiania się na wejściu, numerowane od 0.
+// Wypisuje błędy o złym formacie linii oraz o powtarzających się strumieniach wyjścia.
+// Zwraca informację, czy należy dalej przetwarzać układ.
 bool read_input() {
     bool correct_input = true;
     int line_number = 1;
@@ -168,24 +172,22 @@ bool read_input() {
     return correct_input;
 }
 
-
+// Wierzchołkami są bramki, graf jest skierowany.
+// Wektor krawędzi wchodzących, potem wychodzących.
+// Krawędź od wierzchołka a do wierzchołka b istnieje wtedy i tylko wtedy,
+// gdy istnieje sygnał wychodzący z a i wchodzący do b.
 vector<pair<vector<int>, vector<int>>> graph;
-// wierzcholkami sa bramki, graf jest skierowany
-// wektor krawedzi wchodzacych, potem wychodzacych
-// krawedz od wierzcholka a do wierzcholka b istnieje wtedy i tylko wtedy,
-// gdy istnieje sygnal wychodzacy z a i wchodzacy do b
 
-// funkcja pomocnicza funkcji create_graph()
-// dodaje krawedz od bramki a do bramki b
+// Funkcja pomocnicza funkcji create_graph().
+// Dodaje krawędź od bramki a do bramki b.
 void add_edge(int a, int b) {
-    //fprintf(stderr, "tu dziala\n");
     graph[a].second.push_back(b);
     graph[b].first.push_back(a);
 }
 
-// na podstawie gates tworzy graf w obiekcie graph
+// Na podstawie wektora kolejno wczytanych bramek gates tworzy graf w obiekcie graph.
 void create_graph() {
-    // uzupelnianie obiektu signals
+    // Uzupełnianie obiektu signals.
     size_t num_of_gates = gates.size();
     for (size_t i = 0; i < num_of_gates; i++) {
         signals[gates[i].second].first = i;
@@ -196,51 +198,40 @@ void create_graph() {
             signals[gates[i].first[j]].second.push_back(i);
         }
     }
-    /* for (auto i = signals.begin(); i != signals.end(); ++i)
-    {
-        fprintf(stderr, "%d: %d; ", i->first, i->second.first);
-        for (int j = 0; j < i->second.second.size(); j++)
-        {
-            fprintf(stderr, "%d ", i->second.second[j]);
-        }
-        fprintf(stderr, "\n");
-    } // wypisywanie obiektu signals, do debugowania */
 
-    // tworzenie obiektu graph
+    // Tworzenie obiektu graph.
     for (size_t i = 0; i < num_of_gates; i++) {
-        // tworzenie pustych wektorów dla wierzcholków grafu
+        // Tworzenie pustych wektorów dla wierzcholków grafu.
         graph.push_back(make_pair(vector<int>(), vector<int>()));
     }
     for (auto i = signals.begin(); i != signals.end(); ++i) {
         for (size_t j = 0; j < i->second.second.size(); j++) {
             if ((i->second).first != -1) {
-                // fprintf(stderr, "dodajemy krawedz od %d do %d\n", (i->second).first, (i->second).second[j]);
                 add_edge((i->second).first, (i->second).second[j]);
             }
         }
     }
 }
 
-// stany wierzcholków potrzebne do algorytmu wykrywania cyklu
+// Stany wierzchołków potrzebne do algorytmu wykrywania cyklu.
 enum visited_state {
     FULLY_DONE,
     IN_PROGRESS,
     NOT_BEGAN
 };
-// nie mam pomyslu na lepsze nazwy :(
 
-// rekurencyjna funkcja przetwarzania wierzcholka o numerze a
-//  w algorytmie wykrywania cykli
+// Rekurencyjna funkcja przetwarzania wierzchołka o numerze a
+// w algorytmie wykrywania cykli.
 bool visit(int a, visited_state* visited_states) {
     visited_states[a] = IN_PROGRESS;
     size_t num_of_edges = graph[a].second.size();
     for (size_t i = 0; i < num_of_edges; i++) {
         if (visited_states[graph[a].second[i]] == IN_PROGRESS) {
-            // znalezienie cyklu
+            // Znalezienie cyklu.
             return false;
         } else if (visited_states[graph[a].second[i]] == NOT_BEGAN) {
             if (!visit(graph[a].second[i], visited_states)) {
-                // znalezienie cyklu w rekurencyjnych wywolaniach
+                // Znalezienie cyklu w rekurencyjnych wywołaniach.
                 return false;
             }
         }
@@ -249,14 +240,14 @@ bool visit(int a, visited_state* visited_states) {
     return true;
 }
 
-// funkcja pomocnicza, ustawia wszystkie wierzcholki na nieodwidzone
+// Funkcja pomocnicza, ustawia wszystkie wierzchołki jako nieodwiedzone.
 void clear_table(visited_state* visited_states, size_t num_of_gates) {
     for (size_t i = 0; i < num_of_gates; i++) {
         visited_states[i] = NOT_BEGAN;
     }
 }
 
-// sprawdza, czy graf przechowywany w graph jest cykliczny
+// Sprawdza, czy graf przechowywany w obiekcie graph jest cykliczny.
 bool is_cyclic() {
     // https://eduinf.waw.pl/inf/alg/001_search/0132.php
     size_t num_of_gates = gates.size();
@@ -268,12 +259,12 @@ bool is_cyclic() {
     return false;
 }
 
-// dla danej poczatkowej konfiguracji sygnalów
-// przechowuje obliczony stan wszystkich sygnalów
+// Dla danej początkowej konfiguracji sygnałów
+// przechowuje obliczony stan wszystkich sygnałów.
 map<int, bool> truth_output;
 
-// sprawdza, które sygnaly nie wychodza z zadnej bramki
-// i zapamietuje je w input_signals
+// Sprawdza, które sygnały nie wychodzą z ąadnej bramki
+// i zapamiętuje je w wektorze input_signals.
 void detect_input_signals(vector<int>* input_signals) {
     for (auto i = signals.begin(); i != signals.end(); ++i) {
         if (i->second.first == -1) {
@@ -283,15 +274,15 @@ void detect_input_signals(vector<int>* input_signals) {
 }
 
 
-// ustawia tablice z konfiguracja sygnalów na same zera
+// Ustawia tablice z konfiguracją sygnałów na zawierającą same zera.
 void initialize_state_of_signals(bool* state_of_signals, size_t num_of_input_signals) {
     for (size_t i = 0; i < num_of_input_signals; i++) {
         state_of_signals[i] = false;
     }
 }
 
-// zmienia tablice z konfiguracja sygnalów na nastepna
-// zwraca false jesli byla to juz ostatnia
+// Zmienia tablicę z konfiguracją sygnałów na nastepną
+// Zwraca false jeśli była to już ostatnia.
 bool next_state_of_signals(bool* state_of_signals, size_t num_of_input_signals) {
     for (int i = num_of_input_signals - 1; i >= 0; i--) {
         if (state_of_signals[i]) {
@@ -304,8 +295,8 @@ bool next_state_of_signals(bool* state_of_signals, size_t num_of_input_signals) 
     return false;
 }
 
-// sortowanie topologiczne wierzcholków grafu
-// zwraca posortowane wierzcholki w wektorze sorted_vertices
+// Sortowanie topologiczne wierzchołków grafu.
+// Zwraca posortowane wierzchołki w wektorze sorted_vertices.
 void toposort(vector<int>* sorted_vertices) {
     queue<int> zero_degree_vertices;
     int vertex_degrees[num_of_gates];
@@ -334,11 +325,9 @@ void toposort(vector<int>* sorted_vertices) {
     reverse((*sorted_vertices).begin(), (*sorted_vertices).end());
 }
 
-
-// dla danej bramki oraz danej konfiguracji jej wejsciowych stanów
-// wypelnia tablice prawdy dla jej wyjscia
+// Dla danej bramki oraz danej konfiguracji jej wejściowych stanów
+// wypełnia tablice prawdy dla jej wyjścia.
 void complete(int gate_number) {
-    //fprintf(stderr, "wypelniamy dla bramki nr %d\n", gate_number);
     size_t num_of_inputs = gates[gate_number].first.size();
     if (gate_types[gate_number] == NOT) {
         truth_output[gates[gate_number].second] = !truth_output[gates[gate_number].first[0]];
@@ -379,15 +368,16 @@ void complete(int gate_number) {
         }
     }
 }
-// oblicza jedna linijke tablicy prawdy dla wszystkich bramek, na podstawie poczatkowej konfiguracji
-// oraz wektora posortowanych wierzcholków
+
+// Oblicza jedną linijkę tablicy prawdy dla wszystkich bramek na podstawie początkowej konfiguracji
+// oraz wektora posortowanych wierzchołków.
 void compute_output(vector<int>* sorted_gates) {
     for (size_t i = 0; i < num_of_gates; i++) {
         complete((*sorted_gates)[i]);
     }
 }
 
-// wypisuje otrzymana liijke tablicy prawdy
+// wWpisuje otrzymaną liijkę tablicy prawdy.
 void print_truth_output() {
     for (auto i = truth_output.begin(); i != truth_output.end(); ++i) {
         if (i->second) {
@@ -399,33 +389,29 @@ void print_truth_output() {
     cout << "\n";
 }
 
-// wypelnia znane od poczatku wartosci tablicy truth_output (te zakladane w danej linijce)
+// Wypełnia znane od początku wartości tablicy truth_output.
 void complete_input_values(size_t num_of_input_signals, vector<int>* input_signals, bool* state_of_signals) {
     for (auto i = truth_output.begin(); i != truth_output.end(); ++i) {
-        i->second = false; //to chyba nie jest konieczne ale dla porzadku, moge to potem wywalic
+        i->second = false;
     }
     for (size_t i = 0; i < num_of_input_signals; i++) {
         truth_output[(*input_signals)[i]] = state_of_signals[i];
     }
 }
 
-// tworzy i wypisuje tablice prawdy ukladu
+// Tworzy i wypisuje tablicę prawdy układu
 void create_truth_table() {
-    // sprawdza, które sygnaly sa tylko wejsciowe
+    // Sprawdza, które sygnały są tylko wejściowe.
     vector<int> input_signals;
     detect_input_signals(&input_signals);
     size_t num_of_input_signals = input_signals.size();
     sort(input_signals.begin(), input_signals.end());
-    /* fprintf(stderr, "input signals to:\n");
-    for (size_t i = 0; i < num_of_input_signals; i++)
-    {
-        fprintf(stderr, "%d\n", input_signals[i]);
-    } // wypisanie tylko wejsciowych sygnalów, pomocnicze */
-    // tablica z obecnie sprawdzana konfiguracja sygnalow
+
+    // Tablica z obecnie sprawdzaną konfiguracją sygnałów.
     bool state_of_signals[num_of_input_signals];
     initialize_state_of_signals(state_of_signals, num_of_input_signals);
 
-    // przejscie po wszystkich konfiguracjach
+    // Przejście po wszystkich konfiguracjach.
     vector<int> sorted_gates;
     toposort(&sorted_gates);
     do {
@@ -433,29 +419,18 @@ void create_truth_table() {
         compute_output(&sorted_gates);
         print_truth_output();
     } while (next_state_of_signals(state_of_signals, num_of_input_signals));
-    /* fprintf(stderr, "kolejnosc sygnalow w truth table:\n");
-    for (auto i = truth_output.begin(); i != truth_output.end(); ++i)
-    {
-        // fprintf(stderr, "w pentli\n");
-        fprintf(stderr, "%d\n", i->first);
-    } // pomocnicze wypisanie, w jakiej kolejnosci rozwazamy sygnaly w truth table (powino byc w rosnacej) */
 }
 
 
 int main() {
-    // wczytuje do (globalnych) wektora gates kolejne bramki oraz do wektora gate_types ich typy
-    // z numeracją od 0 w kolejności pojawiania się na wejsciu
-    // wypisuje bledy o zlym formacie linii oraz o powtarzajacych sie strumieniach wyjscia
-    // zwraca informacje czy nalezy dalej przetwarzac uklad
     bool is_correct_data = read_input();
-    num_of_gates = gates.size(); // to sie potem wlozy do jakiejs funkcji
+
+    num_of_gates = gates.size();
     if (is_correct_data) {
         create_graph();
-        // fprintf(stderr, "tu dziala\n");
         if (is_cyclic()) {
             fprintf(stderr, "Error: sequential logic analysis has not yet been implemented.\n");
         }
-            // fprintf(stderr, "tu dziala\n");
         else {
             create_truth_table();
         }
