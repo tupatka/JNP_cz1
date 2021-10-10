@@ -51,8 +51,7 @@ int count_words_in_line(string line) {
 
 bool handle_short_circuit(int line_number, int output_stream, set<int> &output_streams) {
     if (output_streams.find(output_stream) != output_streams.end()) {
-        cout << "Error in line " << line_number << ": signal " << output_stream
-             << " is assigned to multiple outputs.\n";
+        fprintf(stderr, "Error in line %d: signal %d is assigned to multiple outputs.\n", line_number, output_stream);
         return false;
     } else {
         output_streams.emplace(output_stream);
@@ -65,7 +64,6 @@ bool handle_num_of_input_error(string line, int line_number, gate_type type) {
     if ((type == XOR && line_size != XOR_LINE_SIZE) ||
         (type == NOT && line_size != NOT_LINE_SIZE) ||
         (type != XOR && type != NOT && line_size < MIN_LINE_SIZE)) {
-        cout << "Error in line " << line_number << ": " << line << "\n";
         return false;
     }
     return true;
@@ -76,20 +74,34 @@ bool parse_gate(string line, stringstream &buffer, bool &correct_input, int line
     bool correct_gate = handle_num_of_input_error(line, line_number, type);
     int output_stream;
     buffer >> output_stream;
-    // czy błędy się nakładają?
-    if (!handle_short_circuit(line_number, output_stream, all_output_streams)) {
+    if(output_stream == 0) {
         correct_gate = false;
+    }
+
+    bool short_circuit_occured = false;
+    if(correct_gate) {
+        if (!handle_short_circuit(line_number, output_stream, all_output_streams)) {
+            short_circuit_occured = true;
+            correct_gate = false;
+        }
     }
 
     int input_stream;
     vector<int> input_streams;
     while (buffer >> input_stream) {
+        if(input_stream == 0) {
+            correct_gate = false;
+        }
         input_streams.emplace_back(input_stream);
     }
     if (correct_gate) {
         gate curr_gate = {input_streams, output_stream};
         gates.emplace_back(curr_gate);
         gate_types[gates.size() - 1] = type;
+    } else {
+        if(!short_circuit_occured) {
+            fprintf(stderr, "Error in line %d: %s\n", line_number, line.c_str());
+        }
     }
 
     if (!correct_gate) {
@@ -119,7 +131,7 @@ bool determine_and_parse_gate(string line, bool &correct_input, int line_number,
     } else if (logic_gate == "NOR") {
         type = NOR;
     } else {
-        cout << "Error in line " << line_number << ": " << line << "\n";
+        fprintf(stderr, "Error in line %d: %s\n", line_number, line.c_str());
         return false;
     }
     return parse_gate(line, buffer, correct_input, line_number, all_output_streams, type);
@@ -130,12 +142,12 @@ bool read_input() {
     int line_number = 1;
     set<int> all_output_streams;
     string line;
-    regex pattern("(NOT|XOR|AND|NAND|OR|NOR)((\\s)+(\\d){1,9})+\\s*");
+    regex pattern("^\\s*(NOT|XOR|AND|NAND|OR|NOR)((\\s)+(\\d){1,9})+\\s*$");
 
     while (getline(cin, line)) {
         smatch result;
         if (!regex_search(line, result, pattern)) {
-            cout << "Error in line " << line_number << ": " << line << "\n";
+            fprintf(stderr, "Error in line %d: %s\n", line_number, line.c_str());
             correct_input = false;
         } else {
             determine_and_parse_gate(line, correct_input, line_number, all_output_streams);
