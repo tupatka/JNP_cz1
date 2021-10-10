@@ -460,6 +460,7 @@ void create_truth_table()
     vector<int> input_signals;
     detect_input_signals(&input_signals);
     unsigned int num_of_input_signals = input_signals.size();
+    sort(input_signals.begin(), input_signals.end());
     /* fprintf(stderr, "input signals to:\n");
     for (int i = 0; i < num_of_input_signals; i++)
     {
@@ -494,11 +495,19 @@ int main() {
     // zwraca informacje czy nalezy dalej przetwarzac uklad
     bool is_correct_data = read_input();
     num_of_gates = gates.size(); // to sie potem wlozy do jakiejs funkcji
-    //fprintf(stderr, "tu dziala\n");
-    if (is_cyclic())
+    if (is_correct_data)
     {
-        fprintf(stderr, "Error: sequential logic analysis has not yet been implemented.\n");
+        create_graph();
+        // fprintf(stderr, "tu dziala\n");
+        if (is_cyclic())
+        {
+            fprintf(stderr, "Error: sequential logic analysis has not yet been implemented.\n");
+        }
+        // fprintf(stderr, "tu dziala\n");
+        else
+        {
+            create_truth_table();
+        }
     }
-    create_truth_table();
     return 0;
 }
