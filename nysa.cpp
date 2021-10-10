@@ -493,12 +493,11 @@ int main() {
     // wypisuje bledy o zlym formacie linii oraz o powtarzajacych sie strumieniach wyjscia
     // zwraca informacje czy nalezy dalej przetwarzac uklad
     bool is_correct_data = read_input();
-    num_of_gates = gates.size(); // to sie potem wlozy do jakiejs funkcji
-    //fprintf(stderr, "tu dziala\n");
-    if (is_cyclic())
-    {
-        fprintf(stderr, "Error: sequential logic analysis has not yet been implemented.\n");
-    }
-    create_truth_table();
+        num_of_gates = gates.size(); // to sie potem wlozy do jakiejs funkcji
+        //fprintf(stderr, "tu dziala\n");
+        if (is_cyclic()) {
+            fprintf(stderr, "Error: sequential logic analysis has not yet been implemented.\n");
+        }
+        create_truth_table();
     return 0;
 }
