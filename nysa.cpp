@@ -8,28 +8,28 @@
 #include <queue>
 #include <stdlib.h>
 
-#define XOR_LINE_SIZE 4
-#define NOT_LINE_SIZE 3
-#define MIN_LINE_SIZE 4
-
 using namespace std;
 
+constexpr int32_t xor_line_size = 4;
+constexpr int32_t not_line_size = 3;
+constexpr int32_t min_line_size = 4;
+
 // Bramka reprezentowana jest przez parę - strumienie wejściowe, strumień wyjściowy.
-using gate = pair<vector<int>, int>;
+using gate = pair<vector<int32_t>, int32_t>;
 
 // Sygnał reprezentowany jest przez parę - bramka z której wychodzi, bramka do której wchodzi.
 // Jeśli nie wychodzi z żadnej bramki, pierwsza wartość z pary to -1.
-using signal = pair<int, vector<int>>;
+using signal = pair<int32_t, vector<int32_t>>;
 
 // Bramki w kolejności pojawiania sie na wejściu.
 vector<gate> gates;
 
 // Sygnały ponumerowane kolejnością pojawiania się.
-unordered_map<int, signal> signals;
+unordered_map<int32_t, signal> signals;
 
 size_t num_of_gates;
 
-enum gate_type {
+enum class gate_type {
     NOT,
     XOR,
     AND,
@@ -39,11 +39,10 @@ enum gate_type {
 };
 
 // Typy bramek ponumerowane według kolejności pojawiania się na wejściu.
-unordered_map<int, gate_type> gate_types;
+unordered_map<int32_t, gate_type> gate_types;
 
-// Zwraca liczbę wyrazów (słów lub liczb) w wierszu.
-int count_words_in_line(string line) {
-    int count = 0;
+int32_t count_words_in_line(string line) {
+    int32_t count = 0;
     stringstream buffer(line);
     string buffer_output;
 
@@ -53,42 +52,44 @@ int count_words_in_line(string line) {
     return count;
 }
 
+bool contains(vector<int32_t> &vec, int32_t value) {
+    return find(vec.begin(),vec.end(), value) != vec.end();
+}
+
 // Sprawdza, czy dany numer strumienia pojawił się wcześniej jako strumień wyjściowy.
 // Jeśli tak, wypisuje błąd. Zapamiętuje, że rozpatrywany strumień jest wyjściowy.
-bool handle_short_circuit(int line_number, int output_stream, set<int> &output_streams) {
-    if (output_streams.find(output_stream) != output_streams.end()) {
+bool handle_short_circuit(int32_t line_number, int32_t output_stream, vector<int32_t> &all_output_streams) {
+    if (contains(all_output_streams, output_stream)) {
         cerr << "Error in line " << line_number << ": signal " << output_stream << " is assigned to multiple outputs.\n";
         return false;
     } else {
-        output_streams.emplace(output_stream);
+        all_output_streams.emplace_back(output_stream);
         return true;
     }
 }
 
-// Sprawdza, czy liczba słów w wierszu zgadza się z typem bramki.
 bool handle_num_of_input_error(string line, gate_type type) {
-    int line_size = count_words_in_line(line);
-    if ((type == XOR && line_size != XOR_LINE_SIZE) ||
-        (type == NOT && line_size != NOT_LINE_SIZE) ||
-        (type != XOR && type != NOT && line_size < MIN_LINE_SIZE)) {
+    int32_t line_size = count_words_in_line(line);
+    if ((type == gate_type::XOR && line_size != xor_line_size) ||
+        (type == gate_type::NOT && line_size != not_line_size) ||
+        (type != gate_type::XOR && type != gate_type::NOT && line_size < min_line_size)) {
         return false;
     }
     return true;
 }
 
-// Sprawdza poprawność bramki, oraz, jeśli jest prawidłowa, zapamiętuje ją.
-bool parse_gate(string line, stringstream &buffer, bool &correct_input, int line_number,
-                set<int> &all_output_streams, gate_type type) {
+bool parse_gate(string line, stringstream &buffer, bool &correct_input, int32_t line_number,
+                vector<int32_t> &all_output_streams, gate_type type) {
     bool correct_gate = handle_num_of_input_error(line, type);
-    int output_stream;
+    int32_t output_stream;
     buffer >> output_stream;
     // Numer strumienia musi być liczbą dodatnią.
     if (output_stream == 0) {
         correct_gate = false;
     }
 
-    int input_stream;
-    vector<int> input_streams;
+    int32_t input_stream;
+    vector<int32_t> input_streams;
     while (buffer >> input_stream) {
         // Numer strumienia musi być liczbą dodatnią.
         if (input_stream == 0) {
@@ -122,8 +123,8 @@ bool parse_gate(string line, stringstream &buffer, bool &correct_input, int line
 }
 
 // Rozpoznaje typ bramki oraz odpowiednio wywołuje funkcję która ją przetworzy lub zwraca błąd.
-bool determine_and_parse_gate(string line, bool &correct_input, int line_number,
-                              set<int> &all_output_streams) {
+bool determine_and_parse_gate(string line, bool &correct_input, int32_t line_number,
+                              vector<int32_t> &all_output_streams) {
     stringstream buffer;
     buffer << line;
     string logic_gate;
@@ -131,17 +132,17 @@ bool determine_and_parse_gate(string line, bool &correct_input, int line_number,
     gate_type type;
 
     if (logic_gate == "XOR") {
-        type = XOR;
+        type = gate_type::XOR;
     } else if (logic_gate == "NOT") {
-        type = NOT;
+        type = gate_type::NOT;
     } else if (logic_gate == "AND") {
-        type = AND;
+        type = gate_type::AND;
     } else if (logic_gate == "NAND") {
-        type = NAND;
+        type = gate_type::NAND;
     } else if (logic_gate == "OR") {
-        type = OR;
+        type = gate_type::OR;
     } else if (logic_gate == "NOR") {
-        type = NOR;
+        type = gate_type::NOR;
     } else {
         cerr << "Error in line " << line_number << ": " << line << '\n';
         return false;
@@ -155,8 +156,8 @@ bool determine_and_parse_gate(string line, bool &correct_input, int line_number,
 // Zwraca informację, czy należy dalej przetwarzać układ.
 bool read_input() {
     bool correct_input = true;
-    int line_number = 1;
-    set<int> all_output_streams;
+    int32_t line_number = 1;
+    vector<int32_t> all_output_streams;
     string line;
     regex pattern("^\\s*(NOT|XOR|AND|NAND|OR|NOR)((\\s)+(\\d){1,9})+\\s*$");
 
@@ -177,11 +178,11 @@ bool read_input() {
 // Wektor krawędzi wchodzących, potem wychodzących.
 // Krawędź od wierzchołka a do wierzchołka b istnieje wtedy i tylko wtedy,
 // gdy istnieje sygnał wychodzący z a i wchodzący do b.
-vector<pair<vector<int>, vector<int>>> graph;
+vector<pair<vector<int32_t>, vector<int32_t>>> graph;
 
 // Funkcja pomocnicza funkcji create_graph().
 // Dodaje krawędź od bramki a do bramki b.
-void add_edge(int a, int b) {
+void add_edge(int32_t a, int32_t b) {
     graph[a].second.push_back(b);
     graph[b].first.push_back(a);
 }
@@ -203,7 +204,7 @@ void create_graph() {
     // Tworzenie obiektu graph.
     for (size_t i = 0; i < num_of_gates; i++) {
         // Tworzenie pustych wektorów dla wierzcholków grafu.
-        graph.push_back(make_pair(vector<int>(), vector<int>()));
+        graph.push_back(make_pair(vector<int32_t>(), vector<int32_t>()));
     }
     for (auto i = signals.begin(); i != signals.end(); ++i) {
         for (size_t j = 0; j < i->second.second.size(); j++) {
@@ -223,7 +224,7 @@ enum visited_state {
 
 // Rekurencyjna funkcja przetwarzania wierzchołka o numerze a
 // w algorytmie wykrywania cykli.
-bool visit(int a, visited_state* visited_states) {
+bool visit(int32_t a, visited_state* visited_states) {
     visited_states[a] = IN_PROGRESS;
     size_t num_of_edges = graph[a].second.size();
     for (size_t i = 0; i < num_of_edges; i++) {
@@ -262,11 +263,11 @@ bool is_cyclic() {
 
 // Dla danej początkowej konfiguracji sygnałów
 // przechowuje obliczony stan wszystkich sygnałów.
-map<int, bool> truth_output;
+map<int32_t, bool> truth_output;
 
 // Sprawdza, które sygnały nie wychodzą z ąadnej bramki
 // i zapamiętuje je w wektorze input_signals.
-void detect_input_signals(vector<int>* input_signals) {
+void detect_input_signals(vector<int32_t>* input_signals) {
     for (auto i = signals.begin(); i != signals.end(); ++i) {
         if (i->second.first == -1) {
             input_signals->push_back(i->first);
@@ -285,7 +286,7 @@ void initialize_state_of_signals(bool* state_of_signals, size_t num_of_input_sig
 // Zmienia tablicę z konfiguracją sygnałów na nastepną
 // Zwraca false jeśli była to już ostatnia.
 bool next_state_of_signals(bool* state_of_signals, size_t num_of_input_signals) {
-    for (int i = num_of_input_signals - 1; i >= 0; i--) {
+    for (int32_t i = num_of_input_signals - 1; i >= 0; i--) {
         if (state_of_signals[i]) {
             state_of_signals[i] = false;
         } else {
@@ -298,9 +299,9 @@ bool next_state_of_signals(bool* state_of_signals, size_t num_of_input_signals) 
 
 // Sortowanie topologiczne wierzchołków grafu.
 // Zwraca posortowane wierzchołki w wektorze sorted_vertices.
-void toposort(vector<int>* sorted_vertices) {
-    queue<int> zero_degree_vertices;
-    int vertex_degrees[num_of_gates];
+void toposort(vector<int32_t>* sorted_vertices) {
+    queue<int32_t> zero_degree_vertices;
+    int32_t vertex_degrees[num_of_gates];
     for (size_t i = 0; i < num_of_gates; i++) {
         vertex_degrees[i] = graph[i].second.size();
     }
@@ -311,7 +312,7 @@ void toposort(vector<int>* sorted_vertices) {
     }
 
     while (!zero_degree_vertices.empty()) {
-        int v = zero_degree_vertices.front();
+        int32_t v = zero_degree_vertices.front();
         zero_degree_vertices.pop();
         sorted_vertices->push_back(v);
         size_t in_degree = graph[v].first.size();
@@ -327,14 +328,14 @@ void toposort(vector<int>* sorted_vertices) {
 
 // Dla danej bramki oraz danej konfiguracji jej wejściowych stanów
 // wypełnia tablice prawdy dla jej wyjścia.
-void complete(int gate_number) {
+void complete(int32_t gate_number) {
     size_t num_of_inputs = gates[gate_number].first.size();
-    if (gate_types[gate_number] == NOT) {
+    if (gate_types[gate_number] == gate_type::NOT) {
         truth_output[gates[gate_number].second] = !truth_output[gates[gate_number].first[0]];
-    } else if (gate_types[gate_number] == XOR) {
+    } else if (gate_types[gate_number] == gate_type::XOR) {
         truth_output[gates[gate_number].second] = (truth_output[gates[gate_number].first[0]] !=
                                                    truth_output[gates[gate_number].first[1]]);
-    } else if (gate_types[gate_number] == AND) {
+    } else if (gate_types[gate_number] == gate_type::AND) {
         truth_output[gates[gate_number].second] = true;
         for (size_t i = 0; i < num_of_inputs; i++) {
             if (!truth_output[gates[gate_number].first[i]]) {
@@ -342,7 +343,7 @@ void complete(int gate_number) {
                 break;
             }
         }
-    } else if (gate_types[gate_number] == NAND) {
+    } else if (gate_types[gate_number] == gate_type::NAND) {
         truth_output[gates[gate_number].second] = false;
         for (size_t i = 0; i < num_of_inputs; i++) {
             if (!truth_output[gates[gate_number].first[i]]) {
@@ -350,7 +351,7 @@ void complete(int gate_number) {
                 break;
             }
         }
-    } else if (gate_types[gate_number] == OR) {
+    } else if (gate_types[gate_number] == gate_type::OR) {
         truth_output[gates[gate_number].second] = false;
         for (size_t i = 0; i < num_of_inputs; i++) {
             if (truth_output[gates[gate_number].first[i]]) {
@@ -358,7 +359,7 @@ void complete(int gate_number) {
                 break;
             }
         }
-    } else if (gate_types[gate_number] == NOR) {
+    } else if (gate_types[gate_number] == gate_type::NOR) {
         truth_output[gates[gate_number].second] = true;
         for (size_t i = 0; i < num_of_inputs; i++) {
             if (truth_output[gates[gate_number].first[i]]) {
@@ -371,7 +372,7 @@ void complete(int gate_number) {
 
 // Oblicza jedną linijkę tablicy prawdy dla wszystkich bramek na podstawie początkowej konfiguracji
 // oraz wektora posortowanych wierzchołków.
-void compute_output(vector<int>* sorted_gates) {
+void compute_output(vector<int32_t>* sorted_gates) {
     for (size_t i = 0; i < num_of_gates; i++) {
         complete((*sorted_gates)[i]);
     }
@@ -390,7 +391,7 @@ void print_truth_output() {
 }
 
 // Wypełnia znane od początku wartości tablicy truth_output.
-void complete_input_values(size_t num_of_input_signals, vector<int>* input_signals, bool* state_of_signals) {
+void complete_input_values(size_t num_of_input_signals, vector<int32_t>* input_signals, bool* state_of_signals) {
     for (auto i = truth_output.begin(); i != truth_output.end(); ++i) {
         i->second = false;
     }
@@ -402,7 +403,7 @@ void complete_input_values(size_t num_of_input_signals, vector<int>* input_signa
 // Tworzy i wypisuje tablicę prawdy układu
 void create_truth_table() {
     // Sprawdza, które sygnały są tylko wejściowe.
-    vector<int> input_signals;
+    vector<int32_t> input_signals;
     detect_input_signals(&input_signals);
     size_t num_of_input_signals = input_signals.size();
     sort(input_signals.begin(), input_signals.end());
@@ -412,7 +413,7 @@ void create_truth_table() {
     initialize_state_of_signals(state_of_signals, num_of_input_signals);
 
     // Przejście po wszystkich konfiguracjach.
-    vector<int> sorted_gates;
+    vector<int32_t> sorted_gates;
     toposort(&sorted_gates);
     do {
         complete_input_values(num_of_input_signals, &input_signals, state_of_signals);
@@ -426,14 +427,16 @@ int main() {
     bool is_correct_data = read_input();
 
     num_of_gates = gates.size();
-    if (is_correct_data) {
-        create_graph();
-        if (is_cyclic()) {
-            fprintf(stderr, "Error: sequential logic analysis has not yet been implemented.\n");
-        }
-        else {
-            create_truth_table();
-        }
+    if (!is_correct_data) {
+        return 0;
+    }
+
+    create_graph();
+    if (is_cyclic()) {
+       cerr<< "Error: sequential logic analysis has not yet been implemented.\n";
+    }
+    else {
+        create_truth_table();
     }
 
     return 0;
