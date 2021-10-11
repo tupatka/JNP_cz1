@@ -57,7 +57,7 @@ int count_words_in_line(string line) {
 // Jeśli tak, wypisuje błąd. Zapamiętuje, że rozpatrywany strumień jest wyjściowy.
 bool handle_short_circuit(int line_number, int output_stream, set<int> &output_streams) {
     if (output_streams.find(output_stream) != output_streams.end()) {
-        fprintf(stderr, "Error in line %d: signal %d is assigned to multiple outputs.\n", line_number, output_stream);
+        cerr << "Error in line " << line_number << ": signal " << output_stream << " is assigned to multiple outputs.\n";
         return false;
     } else {
         output_streams.emplace(output_stream);
@@ -87,14 +87,6 @@ bool parse_gate(string line, stringstream &buffer, bool &correct_input, int line
         correct_gate = false;
     }
 
-    bool short_circuit_occured = false;
-    if (correct_gate) {
-        if (!handle_short_circuit(line_number, output_stream, all_output_streams)) {
-            short_circuit_occured = true;
-            correct_gate = false;
-        }
-    }
-
     int input_stream;
     vector<int> input_streams;
     while (buffer >> input_stream) {
@@ -104,13 +96,22 @@ bool parse_gate(string line, stringstream &buffer, bool &correct_input, int line
         }
         input_streams.emplace_back(input_stream);
     }
+
+    bool short_circuit_occured = false;
+    if (correct_gate) {
+        if (!handle_short_circuit(line_number, output_stream, all_output_streams)) {
+            short_circuit_occured = true;
+            correct_gate = false;
+        }
+    }
+
     if (correct_gate) {
         gate curr_gate = {input_streams, output_stream};
         gates.emplace_back(curr_gate);
         gate_types[gates.size() - 1] = type;
     } else {
         if (!short_circuit_occured) {
-            fprintf(stderr, "Error in line %d: %s\n", line_number, line.c_str());
+            cerr << "Error in line " << line_number << ": " << line << '\n';
         }
     }
 
@@ -142,7 +143,7 @@ bool determine_and_parse_gate(string line, bool &correct_input, int line_number,
     } else if (logic_gate == "NOR") {
         type = NOR;
     } else {
-        fprintf(stderr, "Error in line %d: %s\n", line_number, line.c_str());
+        cerr << "Error in line " << line_number << ": " << line << '\n';
         return false;
     }
     return parse_gate(line, buffer, correct_input, line_number, all_output_streams, type);
@@ -162,7 +163,7 @@ bool read_input() {
     while (getline(cin, line)) {
         smatch result;
         if (!regex_search(line, result, pattern)) {
-            fprintf(stderr, "Error in line %d: %s\n", line_number, line.c_str());
+            cerr << "Error in line " << line_number << ": " << line << '\n';
             correct_input = false;
         } else {
             determine_and_parse_gate(line, correct_input, line_number, all_output_streams);
@@ -305,7 +306,6 @@ void toposort(vector<int>* sorted_vertices) {
     }
     for (size_t i = 0; i < num_of_gates; i++) {
         if (vertex_degrees[i] == 0) {
-            // fprintf(stderr, "%d jest wierzcholkiem koncowym\n", i);
             zero_degree_vertices.push(i);
         }
     }
@@ -377,7 +377,7 @@ void compute_output(vector<int>* sorted_gates) {
     }
 }
 
-// wWpisuje otrzymaną liijkę tablicy prawdy.
+// Wypisuje otrzymaną linijkę tablicy prawdy.
 void print_truth_output() {
     for (auto i = truth_output.begin(); i != truth_output.end(); ++i) {
         if (i->second) {
